@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "isynthesis"
+version = "1.0.0"
+description = "Forward synthesis planning system based on Monte-Carlo Tree Search"
+authors = ["Adelia Fatykhova <adelik21979@gmail.com>"]
+license = "LGPL-3.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+CachedMethods = "0.1.4"
+cachetools = "4.1.1"
+CGRdb = { git = "https://github.com/pandylandy/CGRdb.git", rev = "473bb0eeb3f180b1e7f9e38fd5609cac2ef04933"}
+CGRdbData = { git = "https://github.com/pandylandy/CGRdbData.git", rev = "3d4efc88857212596042a9b73b331035d4b7b732"}
+CGRtools = "4.1.34"
+CIMtools = { git = "https://github.com/cimm-kzn/CIMtools.git", branch = "master"}
+compress-pickle = "1.1.0"
+ipykernel = "~5.1"
+LazyPony = "0.3.2"
+lxml = "4.9.2"
+matplotlib = "3.6.3"
+networkx = "3.0"
+numpy = "~1.21.0"
+pandas = "^1.4.4"
+pony = "^0.7.11"
+psycopg2-binary = "~2.8.4"
+py-mini-racer = "0.6.0"
+StructureFingerprint = "1.25"
+jupyter = "^1.0.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
