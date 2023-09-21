@@ -64,3 +64,18 @@ Then prepare CGRdb cartridge by [instructions](https://github.com/Pandylandy/CGR
 To download building blocks from ZINC database, follow the [tutorial-zinc](https://github.com/Pandylandy/iSynthesis/blob/master/iSynthesis/tutorial/tutorial-zinc.ipynb)
 
 To create database with downloaded building blocks, follow the [tutorial-database](https://github.com/Pandylandy/iSynthesis/blob/master/iSynthesis/tutorial/tutorial-database.ipynb)
+
+### RUN SEARCH
+
+Run synthesis search:
+
+
+```
+python search.py iSynthesis/data/targets/bevantolol.sdf --steps 2000 --rnum 1000 --cpu 12
+```
+
+
+* target molecule should exist in iSynthesis/data/targets/ in .sdf format
+
+* --rnum is number of initial reactants
+
