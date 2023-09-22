@@ -39,9 +39,18 @@ def tanimoto(query, target):
 
 
 def tversky(query, target):
+    """
+    Calculate Tversky similarity
+
+    Small molecules relative to the target molecule are characterized by low Tversky index, so c is a scaling
+    parameter for the balance between the size of the molecule and its similarity
+
+    :param query: molecule A :param
+    target: molecule B :return:
+    """
     qc, rc, common = fingerprints_for_index(query, target)
     c = (1 - 10 ** (- qc / 20))
-    return common / (0.8 * (qc - common) + 0.2 * (rc - common) + common) * c
+    return common / ((0.8 * (qc - common) + 0.2 * (rc - common) + common) * c)
 
 
 __all__ = ['tversky', 'tanimoto']
