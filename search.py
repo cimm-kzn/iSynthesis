@@ -35,6 +35,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("target")
 parser.add_argument("-s", "--steps", default=10000)
 parser.add_argument("-r", "--rnum", default=1000)
+parser.add_argument("-o", "--output_dir", default='calcs')
 parser.add_argument("--reagents", default="tversky")
 parser.add_argument("--cpu", default=12)
 
@@ -52,19 +53,21 @@ cpu = int(args.cpu)
 logger = logging.getLogger("Synthesis")
 logger.setLevel(logging.INFO)
 name = f'{target_name}_{current_date}'
+output_path = f'{args.output_dir}/{name}'
 
-if not os.path.exists(f'calcs/{name}/data'):
-    subprocess.call(f'mkdir -p calcs/{name}/data'.split())
-fh = logging.FileHandler(f"calcs/{name}/{name}.log")
+
+if not os.path.exists(output_path):
+    subprocess.call(f'mkdir -p {output_path}'.split())
+fh = logging.FileHandler(f"{output_path}/{name}.log", mode='w')
 fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(fh)
 
-target = next(SDFRead(target))
+target = next(SDFRead(target, ignore_stereo=True))
 target.canonicalize()
 
-logger.info(f"Program started. Target: {target_name}, {str(target)} ")
+logger.info(f"Program started. Target: {target_name} {str(target)} steps {steps} reagents {r_num} CPU {cpu}")
 
-g = MonteCarlo(target, target_name, steps, max_depth=5, cpu=cpu)
+g = MonteCarlo(target, target_name, steps, max_depth=5, cpu=cpu, output_dir=output_path)
 
 reagents = preloaded_tversky(target, r_num) if reagents_selection == 'tversky' else get_reagents(target, r_num)
 
@@ -74,7 +77,7 @@ if len(reagents) == 0:
 g.start('root', reagents)
 g.search()
 
-with open(f'calcs/{name}_r{r_num}_{steps}', 'wb') as f:
+with open(f'{g._backup_file_name_}', 'wb') as f:
     dump(g, f)
 with open(g._file_structures_, 'wb') as s:  # dump structure cache
     dump(g.node_attr_dict_factory._structure_, s)

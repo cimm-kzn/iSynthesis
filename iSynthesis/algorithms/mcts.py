@@ -17,11 +17,10 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 
 
-import logging
-from datetime import datetime
+from datetime import date
 from iSynthesis.config import ROOT, THREADS
 from iSynthesis.utils import *
-from logging import getLogger, info
+from logging import getLogger
 from multiprocessing import Process, Queue
 from networkx import shortest_path
 from operator import itemgetter
@@ -29,14 +28,14 @@ from pickle import load, dump, _Pickler
 from .similarity import tversky
 from .preparer import get_func_groups
 from pony.orm import db_session
-from .react import calc, react, react2mol, worker, react2mol
+from .react import calc, react, react2mol, worker
 
 from .tree import Tree
 
 
 class MonteCarlo(Tree, _Pickler):
 
-    def __init__(self, target, target_name, number=5000, max_depth=5, cpu=THREADS):
+    def __init__(self, target, target_name, number=5000, max_depth=5, cpu=THREADS, output_dir='.'):
         """
         :param target: target molecule
         :param number: number of iterations on the Tree
@@ -48,10 +47,11 @@ class MonteCarlo(Tree, _Pickler):
         self.len = 100
         self.bb = False
         self.iteration = 1
-        self.date = datetime.now().strftime('%m%d')
-        self._file_with_target_name_ = f"calcs/{self.target_name}_with_target{self.date}"
-        self._backup_file_name_ = f"calcs/{self.target_name}_backup{self.date}"
-        self._file_structures_ = f"calcs/{self.target_name}_structures{self.date}"
+        self.date = date.today()
+        self._file_with_target_name_ = f"{output_dir}/{self.target_name}_with_target{self.date}"
+        self._backup_file_name_ = f"{output_dir}/{self.target_name}_backup{self.date}"
+        self._file_structures_ = f"{output_dir}/{self.target_name}_structures{self.date}"
+        self._file_paths_ = f"{output_dir}/{self.target_name}_paths_{self.date}"
         super().__init__()
         self.max_depth = max_depth
         self.__cpu = cpu
@@ -130,19 +130,20 @@ class MonteCarlo(Tree, _Pickler):
                 with open(self._file_structures_, 'wb') as s:  # dump structure cache
                     dump(self.node_attr_dict_factory._structure_, s)
                 logger.info('SIMILAR PATHS')
-                self.show_similar_paths(25)
+                self.show_similar_paths(100)
                 logger.info('------------------------------------------')
                 logger.info('backup dumped into {}'.format(self._backup_file_name_))
         [p.terminate() for p in procs]
         return self
 
     def start(self, root, nodes):
+        logger = getLogger('Synthesis.MCTS.start')
         self.add_node(root, data=root, score=0, value=0.01, parent=None, visits=0)
         for node in nodes:
             num = len(self.nodes) + 1
             predicted = tversky(node, self.target)
             if node == self.target:
-                info('target already exists in the database of building blocks')
+                logger.info('target already exists in the database of building blocks')
                 print('target already exists in the database of building blocks', 'magenta')
                 self.bb = True
                 return
@@ -160,60 +161,67 @@ class MonteCarlo(Tree, _Pickler):
             if template not in exist_templates or r not in exist_reactions:
                 self.achieved = (p, tan, r, template)
 
-    @db_session
-    def path(self, number=50):
-        """
-        :param number: len of similar molecules list
-        :return: shortest path from root to target if target in Tree or
-                list of most similar to target molecules
-        """
-        path = []
-        data = [x[1] for x in self.data]
-        if self.target in data:
-            nodes = self.get_nodes(self.target)
-            for n in nodes:
-                path.append(shortest_path(self, ROOT, n))
-        else:
-            print('\(T____T)/ sorry')
-            path = self.similar_path(number)
-        return path
-
     def similar_path(self, number):
         crop = {k: self.achieved[k] for k in list(self.achieved)[:number]}.items()
-        return [(shortest_path(self, ROOT, n), t, r) for p, l in crop for d in l for n in self.get_nodes(p)
-                for t, r in zip([d['tanimoto']], [d['reaction']])]
+        return [(shortest_path(self, ROOT, node), tanimoto, reaction)
+                for product, list_info in crop for inf in list_info
+                for node in self.get_nodes(product)
+                for tanimoto, reaction in zip([inf['tanimoto']], [inf['reaction']])]
 
     def show_similar_paths(self, number):
         """
         :param number: number of similar molecules to show path
         :return: dictionary of similar to target molecules with Tv index and all reactions with templates
-        {(mol, Tv): (*reactions, *templates)}
+        {(mol, Tv): (*reactions, *t}emplates)}
+
+        Example:
+        1.0 - Tanimoto
+        COc1ccc(CCNC(C)=O)cc1OC>>c1c(OC)c(ccc1CCN)OC [rule]
+        c1c(OC)c(ccc1CCN)OC.c1ccc(OCC2OC2)cc1C>>c1c(OCC(O)CNCCc2cc(OC)c(cc2)OC)cccc1C [rule]
+        $$$ - separator for different pathways of one product
+        COc1ccc(cc1OC)CCNC=O>>c1c(OC)c(ccc1CCN)OC [rule]
+        c1c(OC)c(ccc1CCN)OC.c1ccc(OCC2OC2)cc1C>>c1c(OCC(O)CNCCc2cc(OC)c(cc2)OC)cccc1C [rule]
+        $$$
+        END - separator for different products
+
+        0.9928057553956835
+        O(c1c(ccc(CC)c1)OCC2OC2)C>>O(c1cc(C)ccc1OCC2OC2)C [rule]
+        O(c1cc(C)ccc1OCC2OC2)C.c1c(C(=O)CN)cc(cc1)OC>>C(CNCC(O)COc1c(OC)cc(C)cc1)(c2cccc(c2)OC)=O [rule]
+        C(CNCC(O)COc1c(OC)cc(C)cc1)(c2cccc(c2)OC)=O>>c1(OC)c(ccc(C)c1)OCC(O)CNCCc2cccc(c2)OC [rule]
+        $$$
+        END
         """
-        logger = logging.getLogger("Synthesis")
         path = self.similar_path(number)
-        d = {}
+        output = {}
         for t in path:
-            o = []
+            tmp_result = []
             ls = [x for x in t[0] if not isinstance(x, list)]
             for i in zip(ls[1:], ls[2:]):
                 data = (*self.get_edge_data(*i)['reaction'], *self.get_edge_data(*i)['template'])
-                o.append(data)
-            if o:
-                m = max(o[-1][0].products)
-                d[(m, t[1])] = o
+                tmp_result.append(data)
+            if tmp_result:
+                output.setdefault((max(tmp_result[-1][0].products), t[1]), []).append(tmp_result)
 
-        for mol, v in d.items():
-            print(mol[1])
-            logger.info(mol[1])
-            for p in v:
-                for i in p:
-                    print(i)
-                    logger.info(i)
-                logger.info('$$$')
-                print('$$$')
-            logger.info('===\n')
-            print('===\n')
-        return d
+        with open(self._file_paths_, 'w') as log:
+            for mol, v in output.items():
+                print(mol[1])
+                seen = set()
+                for p in v:
+                    n = 0
+                    for i in p:
+                        if n == 0 and bytes(i[0]) in seen:
+                            break
+                        seen.add(bytes(i[0]))
+                        print(*i)
+                        log.write(*i)
+                        log.write('\n')
+                        n += 1
+                    else:
+                        print('$$$')
+                        log.write('$$$')
+                print('END\n')
+                log.write('END\n')
+        return output
 
 
 __all__ = ['MonteCarlo']

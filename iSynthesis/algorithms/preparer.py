@@ -34,7 +34,7 @@ def get_reagents(target, number):
     return [(m.structure, t) for m, t in zip(f, t)][:number]
 
 
-def preloaded_tversky(target, limit=300, source=None):
+def preloaded_tversky(target, limit=300):
     f = load(open(FPS, 'rb'))
     tfp = set(LinearFingerprint(max_radius=6, length=4096, number_bit_pairs=4).transform_bitset([target])[0])
     r = {}

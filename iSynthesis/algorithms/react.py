@@ -69,8 +69,12 @@ def react2mol(target, reactant, template):
         for i in found:
             with db_session:
                 second_reactant = i.structure
-                reaction = next(reactor([reactant, second_reactant]), None)
-                if reaction:
-                    return reaction, template, '2'
-                else:
-                    continue
+                try:
+                    reaction = next(reactor([reactant, second_reactant]), None)
+                    if reaction:
+                        return reaction, template, '2'
+                    else:
+                        continue
+                except Exception as e:
+                    logger = getLogger("Synthesis.react2mol")
+                    logger.error(e)
