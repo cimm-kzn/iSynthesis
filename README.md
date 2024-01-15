@@ -43,7 +43,7 @@ Setup manually
   poetry install
   ```
 ### Data
-Firstly, download [building blocks](http://seafile.cimm.site/f/da3dba6f24694018bd40/) and
+Firstly, download [building blocks](https://seafile.cimm.site/f/f21208c400654085badc/?dl=1) and
 
 Extract bzip2 archive:
 ```
