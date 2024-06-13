@@ -54,10 +54,10 @@ def preloaded_tversky(target, limit=300):
 
 
 def get_func_groups(reactant):
-    # return index_structure(reactant)
-    with db_session:
-        structure = db.Molecule.find_structure(reactant)
-        return [x.id for x in structure.classes] if structure else index_structure(reactant)
+    return index_structure(reactant)
+    # with db_session:
+    #     structure = db.Molecule.find_structure(reactant)
+    #     return [x.id for x in structure.classes] if structure else index_structure(reactant)
 
 
 __all__ = ['preloaded_tversky', 'get_func_groups']

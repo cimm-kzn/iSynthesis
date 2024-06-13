@@ -35,7 +35,7 @@ from .tree import Tree
 
 class MonteCarlo(Tree, _Pickler):
 
-    def __init__(self, target, target_name, number=5000, max_depth=5, cpu=THREADS, output_dir='.'):
+    def __init__(self, target, target_name, number=5000, max_depth=5, cpu=THREADS, output_dir='.', a_reac=False):
         """
         :param target: target molecule
         :param number: number of iterations on the Tree
@@ -55,6 +55,7 @@ class MonteCarlo(Tree, _Pickler):
         super().__init__()
         self.max_depth = max_depth
         self.__cpu = cpu
+        self.a_reac = a_reac
 
     def __setstate__(self, d):
         self.__dict__.update(d)
@@ -108,9 +109,9 @@ class MonteCarlo(Tree, _Pickler):
                 two_component = list(get_reactions(groups_in_query, single=False))
                 logger.info(f"found 1-c. rules: {len(one_component)}")
                 logger.info(f"found 2-c. rules: {len(two_component)}")
-                [task_queue.put((react, (structure, template))) for template in one_component]
-                [task_queue.put((react2mol, (self.target, structure, template))) for template in two_component]
-                calculated = calc(done_queue, len(one_component) + len(two_component), self.target)
+                [task_queue.put((react, (structure, template, self.a_reac))) for template in one_component]
+                [task_queue.put((react2mol, (self.target, structure, template, self.a_reac))) for template in two_component]
+                calculated = calc(done_queue, len(one_component) + len(two_component), self.target, self.a_reac)
                 new_nodes = sorted(set(calculated), key=itemgetter(1), reverse=True)
                 done = self.expansion(best, new_nodes)
                 self.update_achieved(new_nodes)
@@ -205,6 +206,8 @@ class MonteCarlo(Tree, _Pickler):
         with open(self._file_paths_, 'w') as log:
             for mol, v in output.items():
                 print(mol[1])
+                log.write(str(mol[1]))
+                log.write('\n')
                 seen = set()
                 for p in v:
                     n = 0
@@ -213,12 +216,13 @@ class MonteCarlo(Tree, _Pickler):
                             break
                         seen.add(bytes(i[0]))
                         print(*i)
-                        log.write(*i)
+                        str_i = [str(k) for k in i]
+                        log.write(''.join(str_i))
                         log.write('\n')
                         n += 1
                     else:
                         print('$$$')
-                        log.write('$$$')
+                        log.write('$$$\n')
                 print('END\n')
                 log.write('END\n')
         return output
