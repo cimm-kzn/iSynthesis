@@ -20,10 +20,12 @@
 from CGRtools.reactor import Reactor
 from logging import getLogger
 from .similarity import tversky, tanimoto
-from ..utils import difference_fingerprint, find_by_fingerprint
+from ..utils import MyFingerprint, find_by_fingerprint
 from pony.orm import db_session
 from traceback import format_exc
-
+from pickle import dump
+from ..utils.load_data.load_index import ids
+from iSynthesis.config import db
 
 @db_session
 def worker(input_queue, output_queue):
@@ -32,20 +34,30 @@ def worker(input_queue, output_queue):
 
 
 @db_session
-def calc(done_queue, task_number, target):
-    logger = getLogger("Synthesis.react.calculate")
+def calc(done_queue, task_number, target, a_reac):
+    logger = getLogger("Synthesis.react.calculate")    
     s, to = 0, 0
     for i in range(task_number):
         try:
-            res = done_queue.get()
-            if res:
-                r, t, i = res
-                for product in r.products:
-                    yield product, tanimoto(product, target), tversky(product, target), r, t
-                if i == '1':
-                    s += 1
-                else:
-                    to += 1
+            react_temp = done_queue.get()
+            if isinstance(react_temp, tuple):
+                if react_temp:
+                    r, t, i = react_temp
+                    for product in r.products:
+                        yield product, tanimoto(product, target), tversky(product, target), r, t
+                    if i == '1':
+                        s += 1
+                    else:
+                        to += 1
+            else:
+                for res in react_temp:
+                    r, t, i = res
+                    for product in r.products:
+                        yield product, tanimoto(product, target), tversky(product, target), r, t
+                    if i == '1':
+                        s += 1
+                    else:
+                        to += 1
         except Exception as e:
             logger.info(f"{e}")
             print(format_exc())
@@ -54,27 +66,35 @@ def calc(done_queue, task_number, target):
     logger.info(f"multi done: {to}")
 
 
-def react(reactant, template):
+def react(reactant, template, a_reac):
     reactor = Reactor(template, delete_atoms=True)
     reaction = next(reactor([reactant]), None)
     if reaction:
+        if a_reac:
+            return [[reaction, template, '1']]
         return reaction, template, '1'
 
 
-def react2mol(target, reactant, template):
-    df = difference_fingerprint(target, reactant, template)
+def react2mol(target, reactant, template, a_reac):
+    fp = MyFingerprint()
+    df = fp.difference_fingerprint(target, reactant, template)
     found = find_by_fingerprint(df)
     if found:
         reactor = Reactor(template, delete_atoms=True)
+        result = []
         for i in found:
             with db_session:
-                second_reactant = i.structure
+                mol = db.Molecule[ids[i[0]]]
+                second_reactant = mol.structure
                 try:
                     reaction = next(reactor([reactant, second_reactant]), None)
                     if reaction:
-                        return reaction, template, '2'
+                        if a_reac:
+                            result.append([reaction, template, '2'])
+                        else:
+                            return reaction, template, '2'     
                     else:
                         continue
                 except Exception as e:
-                    logger = getLogger("Synthesis.react2mol")
-                    logger.error(e)
+                    pass
+        return result

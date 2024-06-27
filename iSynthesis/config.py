@@ -10,12 +10,12 @@ DATA = 'data'
 DEPTH = 'depth'
 MEAN = 'mean_value'
 
-DB_Name = 'zinc'
+DB_Name = 'bb'
 DEEP = False
 THREADS = 20
 SEED = 11
 
-db = load_schema(DB_Name, user='postgres', password='password', host='localhost', database='postgres', port=5432)
+db = load_schema('zinc', user='postgres', password='password', host='localhost', database='postgres', port=2202)
 
 
 FPS = 'iSynthesis/data/zinc/zinc_fps.pickle'

@@ -33,22 +33,23 @@ current_date = date.today()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("target")
-parser.add_argument("-s", "--steps", default=10000)
+parser.add_argument("-s", "--steps", default=10)
 parser.add_argument("-r", "--rnum", default=1000)
 parser.add_argument("-o", "--output_dir", default='calcs')
 parser.add_argument("--reagents", default="tversky")
-parser.add_argument("--cpu", default=12)
+parser.add_argument("--cpu", default=4)
+parser.add_argument('-a', '--all', help='All reactions', default=False)
 
 
 args = parser.parse_args()
 target = args.target
 target_name = target.split('/')[-1].split('.')[0]
-print(target_name)
 reagents_selection = args.reagents
 
 steps = int(args.steps)
 r_num = int(args.rnum)
 cpu = int(args.cpu)
+a_reac = args.all
 
 logger = logging.getLogger("Synthesis")
 logger.setLevel(logging.INFO)
@@ -62,12 +63,12 @@ fh = logging.FileHandler(f"{output_path}/{name}.log", mode='w')
 fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(fh)
 
-target = next(SDFRead(target, ignore_stereo=True))
+target = next(SDFRead(target, ignore=True, ignore_stereo=True))
 target.canonicalize()
 
-logger.info(f"Program started. Target: {target_name} {str(target)} steps {steps} reagents {r_num} CPU {cpu}")
+logger.info(f"Program started. Target: {target_name} {str(target)} steps {steps} reagents {r_num} CPU {cpu} with all reactions {a_reac}")
 
-g = MonteCarlo(target, target_name, steps, max_depth=5, cpu=cpu, output_dir=output_path)
+g = MonteCarlo(target, target_name, steps, max_depth=5, cpu=cpu, output_dir=output_path, a_reac=a_reac)
 
 reagents = preloaded_tversky(target, r_num) if reagents_selection == 'tversky' else get_reagents(target, r_num)
 
