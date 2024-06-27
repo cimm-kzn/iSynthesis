@@ -38,30 +38,27 @@ def calc(done_queue, task_number, target, a_reac):
     logger = getLogger("Synthesis.react.calculate")    
     s, to = 0, 0
     for i in range(task_number):
-        try:
-            react_temp = done_queue.get()
-            if isinstance(react_temp, tuple):
-                if react_temp:
-                    r, t, i = react_temp
-                    for product in r.products:
-                        yield product, tanimoto(product, target), tversky(product, target), r, t
-                    if i == '1':
-                        s += 1
-                    else:
-                        to += 1
-            else:
-                for res in react_temp:
-                    r, t, i = res
-                    for product in r.products:
-                        yield product, tanimoto(product, target), tversky(product, target), r, t
-                    if i == '1':
-                        s += 1
-                    else:
-                        to += 1
-        except Exception as e:
-            logger.info(f"{e}")
-            print(format_exc())
+        react_temp = done_queue.get()
+        if react_temp is None:
             continue
+        if isinstance(react_temp, tuple):
+            if react_temp:
+                r, t, i = react_temp
+                for product in r.products:
+                    yield product, tanimoto(product, target), tversky(product, target), r, t
+                if i == '1':
+                    s += 1
+                else:
+                    to += 1
+        else:
+            for res in react_temp:
+                r, t, i = res
+                for product in r.products:
+                    yield product, tanimoto(product, target), tversky(product, target), r, t
+                if i == '1':
+                    s += 1
+                else:
+                    to += 1
     logger.info(f"single done: {s}")
     logger.info(f"multi done: {to}")
 
@@ -95,6 +92,6 @@ def react2mol(target, reactant, template, a_reac):
                             return reaction, template, '2'     
                     else:
                         continue
-                except Exception as e:
+                except Exception:
                     pass
         return result
