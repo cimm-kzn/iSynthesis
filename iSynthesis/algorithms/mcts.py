@@ -18,6 +18,7 @@
 
 
 from datetime import date
+from CGRtools import smiles
 from iSynthesis.config import ROOT, THREADS
 from iSynthesis.utils import *
 from logging import getLogger
@@ -27,9 +28,7 @@ from operator import itemgetter
 from pickle import load, dump, _Pickler
 from .similarity import tversky
 from .preparer import get_func_groups
-from pony.orm import db_session
 from .react import calc, react, react2mol, worker
-
 from .tree import Tree
 
 
@@ -142,14 +141,15 @@ class MonteCarlo(Tree, _Pickler):
         self.add_node(root, data=root, score=0, value=0.01, parent=None, visits=0)
         for node in nodes:
             num = len(self.nodes) + 1
-            predicted = tversky(node, self.target)
-            if node == self.target:
+            node_structure = smiles(node)
+            predicted = tversky(node_structure, self.target)
+            if node_structure == self.target:
                 logger.info('target already exists in the database of building blocks')
                 print('target already exists in the database of building blocks', 'magenta')
                 self.bb = True
                 return
             mean = self.set_mean_value(predicted, 1)
-            self.add_node(num, data=node, value=predicted, score=self.set_score(mean, 1),
+            self.add_node(num, data=node_structure, value=predicted, score=self.set_score(mean, 1),
                           parent=0, visits=0, depth=0, mean_value=mean)
             self.add_edge(root, num)
         return self
@@ -160,7 +160,7 @@ class MonteCarlo(Tree, _Pickler):
             exist_templates = [x['template'] for x in self.achieved.get(p, [])]
             exist_reactions = [x['reaction'] for x in self.achieved.get(p, [])]
             if template not in exist_templates or r not in exist_reactions:
-                self.achieved = (p, tan, r, template)
+                self.achieved = (p, tan, str(r), str(template))
 
     def similar_path(self, number):
         crop = {k: self.achieved[k] for k in list(self.achieved)[:number]}.items()
@@ -201,7 +201,7 @@ class MonteCarlo(Tree, _Pickler):
                 data = (*self.get_edge_data(*i)['reaction'], *self.get_edge_data(*i)['template'])
                 tmp_result.append(data)
             if tmp_result:
-                output.setdefault((max(tmp_result[-1][0].products), t[1]), []).append(tmp_result)
+                output.setdefault((max(smiles(tmp_result[-1][0]).products), t[1]), []).append(tmp_result)
 
         with open(self._file_paths_, 'w') as log:
             for mol, v in output.items():
@@ -212,9 +212,9 @@ class MonteCarlo(Tree, _Pickler):
                 for p in v:
                     n = 0
                     for i in p:
-                        if n == 0 and bytes(i[0]) in seen:
+                        if n == 0 and i[0] in seen:
                             break
-                        seen.add(bytes(i[0]))
+                        seen.add(i[0])
                         print(*i)
                         str_i = [str(k) for k in i]
                         log.write(''.join(str_i))

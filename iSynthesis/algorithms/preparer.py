@@ -24,14 +24,14 @@ from iSynthesis.utils import *
 from pickle import load
 from pony.orm import db_session
 from StructureFingerprint import LinearFingerprint
-
+import gc
 
 @db_session
 def get_reagents(target, number):
     r = db.Molecule.find_similar(target)
     f = r.molecules()
     t = r.tanimotos()
-    return [(m.structure, t) for m, t in zip(f, t)][:number]
+    return [(str(m.structure, t)) for m, t in zip(f, t)][:number]
 
 
 def preloaded_tversky(target, limit=300):
@@ -47,9 +47,11 @@ def preloaded_tversky(target, limit=300):
 
     for mis, t in sorted(r.items(), key=lambda x: x[1], reverse=True)[:limit + 1]:
         with db_session:
-            res[db.Molecule[mis].structure] = t
+            res[str(db.Molecule[mis].structure)] = t
 
     del r
+    gc.collect()
+    del gc.garbage[:]
     return {k: v for k, v in sorted(res.items(), key=lambda x: x[1], reverse=True)}
 
 

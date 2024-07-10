@@ -17,15 +17,8 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 
 
-from CGRtools.containers import ReactionContainer, MoleculeContainer
-from collections import Counter
-from iSynthesis.config import db
-from hashlib import md5
-from pandas import concat
-from pony.orm import db_session
-from pickle import load, dump
-from re import search
-from traceback import format_exc
+from CGRtools import MoleculeContainer
+from pickle import load
 
 from CGRtools._functions import tuple_hash
 from collections import Counter, defaultdict
@@ -45,9 +38,10 @@ def query2molecule(queries):
             m.add_atom(a[1].atomic_symbol, a[0])
         for b in q.bonds():
             # m.add_bond(*b)
-            m.add_bond(b[0], b[1], b[2].order[0])  #для версии 4.1
+            m.add_bond(b[0], b[1], b[2].order[0])  # для версии 4.1
         molecules.append(m)
     return molecules
+
 
 class MyFingerprint(LinearFingerprint):
     def __init__(self,  min_radius: int = 1, max_radius: int = 6, length: int = 4096,
@@ -108,7 +102,6 @@ class MyFingerprint(LinearFingerprint):
                     active_bits.add(tpl & mask)
         
         return active_bits
-
 
 
 def find_by_fingerprint(found_fp, operator='substructure'):

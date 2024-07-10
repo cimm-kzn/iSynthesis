@@ -144,7 +144,7 @@ class Tree(DiGraph):
                 mean = self.set_mean_value(tv, 1)
                 self.add_node(num, data=structure, value=tv, score=self.set_score(mean, 1),
                               visits=0, parent=parent, depth=0, mean_value=mean)
-                self.add_edge(parent, num, reaction={reaction}, template={template})
+                self.add_edge(parent, num, reaction={str(reaction)}, template={str(template)})
                 if structure == self.target:
                     done = True
                     logger.info(f"{'=' * 20}TARGET RECEIVED{'=' * 20}")
@@ -152,8 +152,8 @@ class Tree(DiGraph):
                     print(f"{'=' * 33}TARGET RECEIVED{'=' * 33}")
             else:
                 num = seen[sig]
-                self.edges[parent, num]['template'].add(template)
-                self.edges[parent, num]['reaction'].add(reaction)
+                self.edges[parent, num]['template'].add(str(template))
+                self.edges[parent, num]['reaction'].add(str(reaction))
         return done
 
     def best_reagent(self):

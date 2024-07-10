@@ -45,7 +45,7 @@ def calc(done_queue, task_number, target, a_reac):
             if react_temp:
                 r, t, i = react_temp
                 for product in r.products:
-                    yield product, tanimoto(product, target), tversky(product, target), r, t
+                    yield product, tanimoto(product, target), tversky(product, target), str(r), str(t)
                 if i == '1':
                     s += 1
                 else:
@@ -54,7 +54,7 @@ def calc(done_queue, task_number, target, a_reac):
             for res in react_temp:
                 r, t, i = res
                 for product in r.products:
-                    yield product, tanimoto(product, target), tversky(product, target), r, t
+                    yield product, tanimoto(product, target), tversky(product, target), str(r), str(t)
                 if i == '1':
                     s += 1
                 else:
