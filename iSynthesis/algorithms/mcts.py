@@ -50,7 +50,7 @@ class MonteCarlo(Tree, _Pickler):
         self._file_with_target_name_ = f"{output_dir}/{self.target_name}_with_target{self.date}"
         self._backup_file_name_ = f"{output_dir}/{self.target_name}_backup{self.date}"
         self._file_structures_ = f"{output_dir}/{self.target_name}_structures{self.date}"
-        self._file_paths_ = f"{output_dir}/{self.target_name}_paths_{self.date}"
+        self._file_paths_ = f"{output_dir}/{self.target_name}_paths_{self.date}.txt"
         super().__init__()
         self.max_depth = max_depth
         self.__cpu = cpu
