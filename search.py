@@ -38,7 +38,8 @@ parser.add_argument("-r", "--rnum", default=1000)
 parser.add_argument("-o", "--output_dir", default='calcs')
 parser.add_argument("--reagents", default="tversky")
 parser.add_argument("--cpu", default=4)
-parser.add_argument('-a', '--all', help='All reactions', default=False)
+parser.add_argument('-a', '--all', help='reactor will do all the combinations for one template', default=False)
+parser.add_argument('-i', '--ignore_target', help='ignore if target exists in database', default=False)
 
 
 args = parser.parse_args()
@@ -50,6 +51,7 @@ steps = int(args.steps)
 r_num = int(args.rnum)
 cpu = int(args.cpu)
 a_reac = args.all
+ignore = args.ignore_target
 
 logger = logging.getLogger("Synthesis")
 logger.setLevel(logging.INFO)
@@ -75,7 +77,14 @@ reagents = preloaded_tversky(target, r_num) if reagents_selection == 'tversky' e
 if len(reagents) == 0:
     raise Exception('Reagents not found')
 
+if ignore:
+    if str(target) in reagents:
+        print('Target already exists')
+        logger.warning('Target already exists')
+        reagents.pop(str(target))
+
 g.start('root', reagents)
+del reagents
 g.search()
 
 with open(f'{g._backup_file_name_}', 'wb') as f:

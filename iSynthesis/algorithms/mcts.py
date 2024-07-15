@@ -217,7 +217,7 @@ class MonteCarlo(Tree, _Pickler):
                         seen.add(i[0])
                         print(*i)
                         str_i = [str(k) for k in i]
-                        log.write(''.join(str_i))
+                        log.write(' '.join(str_i))
                         log.write('\n')
                         n += 1
                     else:
